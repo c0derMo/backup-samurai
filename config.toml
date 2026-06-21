@@ -1,0 +1,62 @@
+cron_schedule = "*/2 * * * *"
+
+[handler.script.x]
+binary = "/bin/sh"
+options = ["/backup-samurai/script.sh"]
+
+[handler.restic.a]
+cron_schedule = "*/5 * * * *"
+repository = "./test_repo"
+password_file = "./repo_pw.txt"
+init = true
+run_check = true
+binary = "./restic"
+[handler.restic.a.backup]
+run_backup = true
+include = [
+    "./config",
+    "./handlers"
+]
+[handler.restic.a.forget]
+run_forget = true
+keep_last = 3
+
+[handler.pgbackup.b]
+destination = "./pg_backup.tar.gz"
+gzip = true
+database_user = "postgres"
+[handler.pgbackup.b.docker]
+run_in_container = true
+container = "db1"
+
+[handler.rclone.c]
+skip = true
+binary = "./rclone"
+[handler.rclone.c.source]
+path = "./test_repo"
+[handler.rclone.c.destination]
+backend = "sftp"
+flags = ["--sftp-host", "example.host", "--sftp-user", "root", "--sftp-key-use-agent"]
+path = "./synced_repo"
+
+[handler.rsync.d]
+ignore_fail = true
+[handler.rsync.d.source]
+location = "./test_repo"
+[handler.rsync.d.destination]
+location = "./synced_repo"
+remote = true
+host = "example.host"
+protocol = "sftp"
+user = "root"
+
+[notifier.ntfy.e]
+server = "https://ntfy.sh"
+topic = "my_topic
+
+[notifier.webhook.d]
+url = "https://web.hook"
+method = "POST"
+meta = {
+    "name" = "Server 1"
+}
