@@ -52,7 +52,7 @@ user = "root"
 
 [notifier.ntfy.e]
 server = "https://ntfy.sh"
-topic = "my_topic
+topic = "my_topic"
 
 [notifier.webhook.d]
 url = "https://web.hook"
