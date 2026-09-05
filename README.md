@@ -50,7 +50,7 @@ run_backup = true      # if true, run `restic backup`
 include = [""]         # files to include
 exclude = [""]         # files to exclude
 
-[handler.restic.name.forger]
+[handler.restic.name.forget]
 run_forget = true      # if true, run `restic forget`
 dry_run = false        # if true, dry run the forget process
 keep_last = 0          # see restic forget documentation for more info (https://restic.readthedocs.io/en/latest/060_forget.html)

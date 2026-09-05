@@ -152,7 +152,7 @@ func (handler ResticHandler) Execute() (error, map[string]string) {
 		return fmt.Errorf("failed to establish restic repo connection: %s", string(output[len(output)-1])), make(map[string]string, 0)
 	}
 
-	if !needsInit && !handler.config.Init {
+	if needsInit && !handler.config.Init {
 		return errors.New("restic repo does not exist and should not be initialized"), make(map[string]string, 0)
 	}
 
