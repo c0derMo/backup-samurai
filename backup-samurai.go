@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 )
@@ -19,6 +18,7 @@ type CliFlags struct {
 	Verbose        bool
 	ForceExecution bool
 	ConfigFile     string
+	LogTarget      string
 }
 
 func buildFlags() CliFlags {
@@ -26,6 +26,7 @@ func buildFlags() CliFlags {
 		Verbose:        false,
 		ForceExecution: false,
 		ConfigFile:     "./config.toml",
+		LogTarget:      "-",
 	}
 
 	flag.Usage = func() {
@@ -37,6 +38,7 @@ func buildFlags() CliFlags {
 	flag.BoolVarP(&flags.Verbose, "verbose", "v", false, "enable verbose logging")
 	flag.BoolVarP(&flags.ForceExecution, "force-execution", "f", false, "force execution, even if cron schedule is too recent")
 	flag.StringVarP(&flags.ConfigFile, "config", "c", "./config.toml", "path to config file")
+	flag.StringVarP(&flags.LogTarget, "log-file", "l", "-", "file to log to. use - to log to stdout")
 
 	flag.Parse()
 
@@ -44,14 +46,9 @@ func buildFlags() CliFlags {
 }
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	flags := buildFlags()
-
-	if flags.Verbose {
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
+	samuraiLogging := lib.InitializeLogging(flags.Verbose, flags.LogTarget)
+	defer samuraiLogging.Cleanup()
 
 	var tomlConf config.SamuraiConfig
 	meta, err := toml.DecodeFile(flags.ConfigFile, &tomlConf)
@@ -83,6 +80,7 @@ func main() {
 
 	for _, n := range meta.Keys() {
 		if strings.HasPrefix(n.String(), "handler.") && strings.Count(n.String(), ".") == 2 {
+			log.Info().Msgf("Beginning execution of handler %s", n.String())
 			handler, baseCfg := handlers.GetConfigByKey(&tomlConf.Handler, n.String())
 			if handler == nil {
 				log.Error().Msgf("Could not find handler for %s", n)
@@ -122,7 +120,7 @@ func main() {
 		}
 
 		if strings.HasPrefix(n.String(), "notifier.") && strings.Count(n.String(), ".") == 2 {
-			log.Info().Msgf("Executing notifier %s", n)
+			log.Info().Msgf("Beginning execution of notifier %s", n)
 			notifier := notifiers.GetConfigByKey(&tomlConf.Notifier, n.String())
 			if notifier == nil {
 				log.Error().Msgf("Could not find notifier for %s", n)
@@ -132,6 +130,7 @@ func main() {
 			} else {
 				notifier.SendSuccess(successfulSteps, skippedSteps, ignoredFails)
 			}
+			log.Info().Msgf("Successfully executed %s", n)
 		}
 	}
 
