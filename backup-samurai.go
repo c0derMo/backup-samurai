@@ -19,6 +19,7 @@ type CliFlags struct {
 	ForceExecution bool
 	ConfigFile     string
 	LogTarget      string
+	NoUpdateCheck  bool
 }
 
 func buildFlags() CliFlags {
@@ -27,6 +28,7 @@ func buildFlags() CliFlags {
 		ForceExecution: false,
 		ConfigFile:     "./config.toml",
 		LogTarget:      "-",
+		NoUpdateCheck:  false,
 	}
 
 	flag.Usage = func() {
@@ -35,6 +37,7 @@ func buildFlags() CliFlags {
 		flag.PrintDefaults()
 	}
 
+	flag.BoolVar(&flags.NoUpdateCheck, "no-update", false, "disable update checking")
 	flag.BoolVarP(&flags.Verbose, "verbose", "v", false, "enable verbose logging")
 	flag.BoolVarP(&flags.ForceExecution, "force-execution", "f", false, "force execution, even if cron schedule is too recent")
 	flag.StringVarP(&flags.ConfigFile, "config", "c", "./config.toml", "path to config file")
@@ -49,6 +52,20 @@ func main() {
 	flags := buildFlags()
 	samuraiLogging := lib.InitializeLogging(flags.Verbose, flags.LogTarget)
 	defer samuraiLogging.Cleanup()
+
+	log.Info().Msgf("Running %s", lib.BuildVersion())
+
+	var err error
+	newer_version := ""
+
+	if !flags.NoUpdateCheck {
+		newer_version, err = lib.CheckForUpdate()
+		if err != nil {
+			log.Err(err).Msg("An error occured while checking for updates")
+		} else if newer_version != "" {
+			log.Info().Msgf("A newer version of backup-samurai is available: %s", newer_version)
+		}
+	}
 
 	var tomlConf config.SamuraiConfig
 	meta, err := toml.DecodeFile(flags.ConfigFile, &tomlConf)
@@ -121,7 +138,7 @@ func main() {
 
 		if strings.HasPrefix(n.String(), "notifier.") && strings.Count(n.String(), ".") == 2 {
 			log.Info().Msgf("Beginning execution of notifier %s", n)
-			notifier := notifiers.GetConfigByKey(&tomlConf.Notifier, n.String())
+			notifier := notifiers.GetConfigByKey(&tomlConf.Notifier, n.String(), "notifier")
 			if notifier == nil {
 				log.Error().Msgf("Could not find notifier for %s", n)
 			}
@@ -130,6 +147,20 @@ func main() {
 			} else {
 				notifier.SendSuccess(successfulSteps, skippedSteps, ignoredFails)
 			}
+			log.Info().Msgf("Successfully executed %s", n)
+		}
+
+		if strings.HasPrefix(n.String(), "updatenotifier.") && strings.Count(n.String(), ".") == 2 {
+			if newer_version == "" {
+				log.Debug().Str("updatenotifier", n.String()).Msg("Skipping update notifier, due to no newer version available")
+				continue
+			}
+			log.Info().Msgf("Beginning execution of update notifier %s", n)
+			notifier := notifiers.GetConfigByKey(&tomlConf.UpdateNotifier, n.String(), "updatenotifier")
+			if notifier == nil {
+				log.Error().Msgf("Could not find updatenotifier for %s", n)
+			}
+			notifier.SendUpdateAvailable(lib.BuildVersion(), newer_version)
 			log.Info().Msgf("Successfully executed %s", n)
 		}
 	}

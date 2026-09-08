@@ -1,7 +1,8 @@
 package config
 
 type SamuraiConfig struct {
-	CronSchedule string `toml:"cron_schedule"`
-	Handler      SamuraiHandler
-	Notifier     SamuraiNotifier
+	CronSchedule   string `toml:"cron_schedule"`
+	Handler        SamuraiHandler
+	Notifier       SamuraiNotifier
+	UpdateNotifier SamuraiNotifier `toml:"updatenotifier"`
 }

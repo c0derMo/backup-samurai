@@ -60,3 +60,12 @@ method = "POST"
 meta = {
     "name" = "Server 1"
 }
+
+[updatenotifier.ntfy.l]
+server = "https://ntfy.sh"
+topic = "my_update_topic"
+[updatenotifier.ntfy.l.update]
+title = "New update available"
+message = "My server X has a new version of backup-samurai available! Current: {current_version}, latest: {latest_version}"
+priority = 5
+tags = "alert"

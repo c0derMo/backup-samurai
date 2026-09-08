@@ -1,9 +1,5 @@
 name: Build and attach release assets
 
-# Dieser Workflow läuft, wenn ein Release veröffentlicht wird.
-# Er baut die Go-Binärdatei für Linux, Windows und macOS (amd64)
-# und hängt die gebauten Binärdateien an das Release an.
-
 on:
   release:
     types: [published]
@@ -13,7 +9,6 @@ permissions:
 
 jobs:
   build:
-    # Wir verwenden einen Matrix-Job, um auf unterschiedlichen Runnern zu bauen
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -38,16 +33,29 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          # Verwende dieselbe Go-Version wie in go.mod
           go-version: 1.26.2
 
+      - name: Set build metadata
+        shell: bash
+        run: |
+          echo "VERSION=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
+          echo "COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
+
       - name: Build binary
-        # Verwende Bash, damit mkdir -p plattformübergreifend funktioniert
         shell: bash
         run: |
           echo "Building for ${{ matrix.os }} (GOOS=${{ matrix.goos }})"
           mkdir -p dist
-          GOOS=${{ matrix.goos }} GOARCH=amd64 go build -o dist/backup_samurai_${{ matrix.os }}_amd64${{ matrix.extension }} .
+          GOOS=${{ matrix.goos }} \
+          GOARCH=amd64\
+          go build \
+            -ldflags "\
+              -X 'c0dermo/backup-samurai/lib.Version=$VERSION' \
+              -X 'c0dermo/backup-samurai/lib.CommitHash=$COMMIT' \
+              -X 'c0dermo/backup-samurai/lib.BuildTimestamp=$BUILD_TIME' \
+            " \
+            -o dist/backup_samurai_${{ matrix.os }}_amd64${{ matrix.extension }} .
 
       - name: Upload to release
         uses: actions/upload-release-asset@v1

@@ -107,6 +107,22 @@ func _formatFailureMessage(template string, successfulSteps map[string]map[strin
 	}
 }
 
+func _formatUpdateMessage(template string, currentVersion string, newerVersion string) string {
+	if template == "" {
+		return fmt.Sprintf("A newer version of backup-samurai is available! Current: %s, latest: %s")
+	}
+
+	var replaceMap []string
+	replaceMap = append(replaceMap,
+		"{current_version}", currentVersion,
+		"{latest_version}", newerVersion,
+	)
+
+	replacer := strings.NewReplacer(replaceMap...)
+
+	return replacer.Replace(template)
+}
+
 func (notifier NtfyNotifier) _formatAuth() string {
 	if notifier.config.Authorization.Username != "" && notifier.config.Authorization.Password != "" {
 		return "Basic " + base64.StdEncoding.EncodeToString([]byte(notifier.config.Authorization.Username+":"+notifier.config.Authorization.Password))
@@ -162,6 +178,31 @@ func (notifier NtfyNotifier) SendFailure(successfulSteps map[string]map[string]s
 	}
 
 	notifier.logger.Debug().Str("uri", full_uri).Msg("Sending fail request")
+	_, err = http.DefaultClient.Do(req)
+
+	return err
+}
+
+func (notifier NtfyNotifier) SendUpdateAvailable(currentVersion string, newerVersion string) error {
+	full_uri := notifier.config.Server + "/" + notifier.config.Topic
+	req, err := http.NewRequest("POST", full_uri, strings.NewReader(_formatUpdateMessage(notifier.config.Update.Message, currentVersion, newerVersion)))
+	if err != nil {
+		return err
+	}
+	if notifier.config.Failure.Title != "" {
+		req.Header.Set("Title", notifier.config.Failure.Title)
+	}
+	if notifier.config.Failure.Priority != "" {
+		req.Header.Set("Priority", notifier.config.Failure.Priority)
+	}
+	if notifier.config.Failure.Tags != "" {
+		req.Header.Set("Tags", notifier.config.Failure.Tags)
+	}
+	if notifier._formatAuth() != "" {
+		req.Header.Set("Authorization", notifier._formatAuth())
+	}
+
+	notifier.logger.Debug().Str("uri", full_uri).Msg("Sending update request")
 	_, err = http.DefaultClient.Do(req)
 
 	return err

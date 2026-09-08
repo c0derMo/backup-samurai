@@ -10,6 +10,8 @@ A backup orchestration tool. Largely inspired by [backupninja](https://0xacab.or
   -v  --verbose           enable verbose logging
   -f  --force-execution   force execution, ignoring cron schedule
   -c  --config            path to config file
+  -l  --log-file          path to logging file, use - to log to stdout (default)
+      --no-update         disable update checker
 ```
 
 ## Cron schedule
@@ -128,7 +130,7 @@ user = ""              # remote user
 #### script
 
 ```toml
-[handler.rsync.name]
+[handler.script.name]
 skip = false           # Whether to skip this step
 ignore_fail = false    # if true, failing this step will not be logged as a failure
 cron_schedule = ""     # custom cron schedule for this handler
@@ -139,6 +141,11 @@ options = [""]         # arguments to pass
 
 ### Notifiers
 
+#### Notifiers & Update notifiers
+
+All notifiers can also be used as update notifiers, by specifying them as `updatenotifier.type.name` instead of `notifier.type.name`.
+Update notifiers will also be executed in order with other steps, so putting them at the very start or very end is recommended.
+
 #### ntfy
 
 Messages can be customized using data from the handlers, see ntfy.go for more info
@@ -148,18 +155,24 @@ Messages can be customized using data from the handlers, see ntfy.go for more in
 server = ""           # ntfy server to use
 topic = ""            # ntfy topic to send to
 
-[notifier.ntfy.authorization]
+[notifier.ntfy.name.authorization]
 username = ""         # ntfy username
 password = ""         # ntfy password
 token = ""            # ntfy token, alternative to username and password
 
-[notifier.ntfy.success]
+[notifier.ntfy.name.success]
 title = ""            # message title
 message = ""          # message content
 priority = ""         # message priority
 tags = ""             # message tags
 
-[notifier.ntfy.failure]
+[notifier.ntfy.name.failure]
+title = ""            # message title
+message = ""          # message content
+priority = ""         # message priority
+tags = ""             # message tags
+
+[notifier.ntfy.name.update]
 title = ""            # message title
 message = ""          # message content
 priority = ""         # message priority

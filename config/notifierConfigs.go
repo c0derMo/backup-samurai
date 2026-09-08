@@ -10,6 +10,7 @@ type SamuraiNtfyNotifier struct {
 	Topic         string
 	Success       SamuariNtfyNotifierNotification
 	Failure       SamuariNtfyNotifierNotification
+	Update        SamuariNtfyNotifierNotification
 	Authorization SamuraiNtfyNotifierAuthorization
 }
 

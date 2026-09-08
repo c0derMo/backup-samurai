@@ -102,6 +102,41 @@ func (notifier WebhookNotifier) SendFailure(successfulSteps map[string]map[strin
 	return err
 }
 
+type webhookUpdateData struct {
+	Metadata       map[string]string
+	CurrentVersion string
+	LatestVersion  string
+}
+
+func (notifier WebhookNotifier) SendUpdateAvailable(currentVersion string, newerVersion string) error {
+	data := webhookUpdateData{
+		Metadata:       notifier.config.Meta,
+		CurrentVersion: currentVersion,
+		LatestVersion:  newerVersion,
+	}
+
+	if len(notifier.config.Meta) == 0 {
+		data.Metadata = make(map[string]string, 0)
+	}
+
+	s_data, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	notifier.logger.Debug().Msg(string(s_data))
+
+	req, err := http.NewRequest(notifier.config.Method, notifier.config.URL, bytes.NewBuffer(s_data))
+	req.Header.Set("Content-Type", "application/json")
+	_, err = http.DefaultClient.Do(req)
+
+	if err == nil {
+		notifier.logger.Info().Str("url", notifier.config.URL).Str("method", notifier.config.Method).Msg("Webhook request sent")
+	}
+
+	return err
+}
+
 func (notifier WebhookNotifier) ValidateConfig() error {
 	if notifier.config.URL == "" {
 		return errors.New("webhook url is required")
