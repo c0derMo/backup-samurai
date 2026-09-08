@@ -48,7 +48,7 @@ jobs:
           echo "Building for ${{ matrix.os }} (GOOS=${{ matrix.goos }})"
           mkdir -p dist
           GOOS=${{ matrix.goos }} \
-          GOARCH=amd64\
+          GOARCH=amd64 \
           go build \
             -ldflags "\
               -X 'c0dermo/backup-samurai/lib.Version=$VERSION' \
